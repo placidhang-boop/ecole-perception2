@@ -1,0 +1,82 @@
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const count = await prisma.user.count();
+  if (count === 0) {
+    await prisma.user.create({
+      data: {
+        email: 'admin@school.local',
+        password: await bcrypt.hash('Admin@123!', 12),
+        name: 'Admin principal',
+        role: 'ADMIN'
+      }
+    });
+  }
+
+  const schoolYearCount = await prisma.schoolYear.count();
+  if (schoolYearCount === 0) {
+    const year = await prisma.schoolYear.create({
+      data: {
+        name: '2026-2027',
+        startDate: new Date('2026-09-01'),
+        endDate: new Date('2027-07-31'),
+        isActive: true
+      }
+    });
+
+    await prisma.promotion.createMany({
+      data: [
+        { name: '1ère secondaire', schoolYearId: year.id },
+        { name: '2ème secondaire', schoolYearId: year.id },
+        { name: '3ème secondaire', schoolYearId: year.id },
+        { name: '4ème secondaire', schoolYearId: year.id }
+      ]
+    });
+  }
+
+  const feeTypeCount = await prisma.feeType.count();
+  if (feeTypeCount === 0) {
+    await prisma.feeType.createMany({
+      data: [
+        { name: 'Frais scolaires', amount: 25000, periodicity: 'MONTHLY', isRequired: true },
+        { name: 'Frais de fonctionnement', amount: 15000, periodicity: 'MONTHLY', isRequired: true },
+        { name: 'Autres frais', amount: 5000, periodicity: 'MONTHLY', isRequired: false }
+      ]
+    });
+  }
+
+  const categoryCount = await prisma.studentCategory.count();
+  if (categoryCount === 0) {
+    await prisma.studentCategory.createMany({
+      data: [
+        { name: 'Enfant d’enseignant', description: 'Catégorie spéciale' },
+        { name: 'Élève supporté', description: 'Aide extérieure' },
+        { name: 'Élève non supporté', description: 'Aucun soutien' }
+      ]
+    });
+  }
+
+  const supporterCount = await prisma.supporter.count();
+  if (supporterCount === 0) {
+    await prisma.supporter.createMany({
+      data: [
+        { name: 'GRS', description: 'Aide institutionnelle', type: 'Organisation' },
+        { name: 'Rouge International', description: 'Programme de soutien', type: 'Association' }
+      ]
+    });
+  }
+
+  console.log('Seed completed');
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
